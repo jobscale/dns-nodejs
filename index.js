@@ -1,15 +1,19 @@
 import path from 'path';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 import dgram from 'dgram';
 import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const json = JSON.parse(readFileSync(path.join(dirname, 'package.json')));
+
 const search = 'jsx.jp';
 const records = {
   version: {
-    TXT: [{ data: 'v0.0.1', ttl: 300 }],
+    TXT: [{ data: json.version, ttl: 300 }],
   },
   '@': {
     A: [{ data: '172.16.6.66', ttl: 300 }],
