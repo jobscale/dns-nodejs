@@ -1,0 +1,29 @@
+{
+  "name": "dns-nodejs",
+  "version": "0.0.1",
+  "description": "dns, nameserver",
+  "main": "index.js",
+  "scripts": {
+    "start": "node .",
+    "lint": "eslint .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jobscale/dns-nodejs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jobscale/dns-nodejs/issues"
+  },
+  "homepage": "https://github.com/jobscale/dns-nodejs#readme",
+  "dependencies": {
+    "@jobscale/logger": "^0.8.4",
+    "dns-packet": "^5.6.1",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.32.0"
+  }
+}
