@@ -6,23 +6,28 @@ import { search, records, denys } from './record.js';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 
-const resolveAny = (name, type, ns) => new Promise((resolve, reject) => {
+const resolveUDP = (name, type, ns) => new Promise((resolve, reject) => {
   const query = dnsPacket.encode({
     type: 'query',
     id: Math.floor(Math.random() * 65535),
     flags: dnsPacket.RECURSION_DESIRED,
     questions: [{ type, name }],
   });
+
   const socket = dgram.createSocket('udp4');
   const timeout = setTimeout(() => {
     socket.close();
-    reject(new Error('socket timed out'));
-  }, 10000);
+    reject(new Error('UDP socket timed out'));
+  }, 5000);
   socket.on('message', msg => {
     clearTimeout(timeout);
     socket.close();
-    const response = dnsPacket.decode(msg);
-    resolve(response.answers);
+    try {
+      const response = dnsPacket.decode(msg);
+      resolve(response);
+    } catch (e) {
+      reject(e);
+    }
   });
   socket.on('error', e => {
     clearTimeout(timeout);
@@ -31,10 +36,40 @@ const resolveAny = (name, type, ns) => new Promise((resolve, reject) => {
   socket.send(query, 53, ns);
 });
 
-const resolver = async (name, type, nss) => {
+const resolveTCP = (name, type, ns) => new Promise((resolve, reject) => {
+  const query = dnsPacket.encode({
+    type: 'query',
+    id: Math.floor(Math.random() * 65535),
+    flags: dnsPacket.RECURSION_DESIRED,
+    questions: [{ type, name }],
+  });
+
+  const socket = net.connect(53, ns, () => {
+    const lengthBuf = Buffer.alloc(2);
+    lengthBuf.writeUInt16BE(query.length);
+    socket.write(Buffer.concat([lengthBuf, query]));
+  });
+  const chunks = [];
+  socket.on('data', chunk => chunks.push(chunk));
+  socket.on('end', () => {
+    const buffer = Buffer.concat(chunks);
+    const length = buffer.readUInt16BE(0);
+    const msg = buffer.slice(2, 2 + length);
+    try {
+      const response = dnsPacket.decode(msg);
+      resolve(response.answers);
+    } catch (e) {
+      reject(e);
+    }
+  });
+  socket.on('error', reject);
+});
+
+const resolver = async (name, type, nss, transport = 'udp') => {
+  const resolveFn = transport === 'tcp' ? resolveTCP : resolveUDP;
   for (const ns of nss) {
     const answers = (
-      await resolveAny(name, type, ns)
+      await resolveFn(name, type, ns)
       .catch(e => logger.warn(`${e.message} ${name} ${type}`))
     ) || [];
     if (answers.length) return answers;
@@ -45,13 +80,14 @@ const resolver = async (name, type, nss) => {
 class Nameserver {
   async createServer(config) {
     this.cache = {};
-    const { forwarder, glueNS } = config;
+    const { transport, forwarder, glueNS } = config;
     // glue proxy
     await Promise.all(
       glueNS.map(name => resolver(name, 'A', forwarder)),
     )
     .then(res => res.map(([item]) => item.data))
     .then(glue => {
+      this.transport = transport;
       this.forwarder = forwarder;
       this.glue = glue;
     });
@@ -97,7 +133,7 @@ class Nameserver {
       // in search to glue
       const key = `${name}-${type}`;
       if (!this.cache[key] || this.cache[key].expires < now) {
-        this.cache[key] = await resolver(name, type, this.glue);
+        this.cache[key] = await resolver(name, type, this.glue, this.transport);
         const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
         this.cache[key].expires = now + ttl;
         logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
@@ -107,7 +143,7 @@ class Nameserver {
       // other to forwarder
       const key = `${name}-${type}`;
       if (!this.cache[key] || this.cache[key].expires < now) {
-        this.cache[key] = await resolver(name, type, this.forwarder);
+        this.cache[key] = await resolver(name, type, this.forwarder, this.transport);
         const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
         this.cache[key].expires = now + ttl;
         logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
@@ -144,15 +180,17 @@ class Nameserver {
 }
 
 const dnsBind = async (port, bind = '127.0.0.1') => {
-  const nameserver = await new Nameserver().createServer({
-    forwarder: ['8.8.8.8', '8.8.4.4'],
-    glueNS: ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'],
-  });
+  const forwarder = ['8.8.8.8', '8.8.4.4'];
+  const glueNS = ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'];
+  const nameserver = {
+    udp: await new Nameserver().createServer({ transport: 'udp', forwarder, glueNS }),
+    tcp: await new Nameserver().createServer({ transport: 'tcp', forwarder, glueNS }),
+  };
 
   const tcpReceiver = async (buffer, socket) => {
     const length = buffer.readUInt16BE(0);
     const msg = buffer.slice(2, 2 + length);
-    const response = await nameserver.parseDNS(msg)
+    const response = await nameserver.tcp.parseDNS(msg)
     .catch(e => logger.warn(e.message));
     if (response) {
       const lengthBuf = Buffer.alloc(2);
@@ -175,7 +213,7 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
 
   const udpServer = dgram.createSocket('udp4');
   const udpReceiver = async (msg, rinfo) => {
-    const response = await nameserver.parseDNS(msg)
+    const response = await nameserver.udp.parseDNS(msg)
     .catch(e => logger.warn(e.message));
     if (response) {
       udpServer.send(response, 0, response.length, rinfo.port, rinfo.address);
