@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --chown=node:staff package.json .
 RUN npm i --omit=dev
-COPY --chown=node:staff index.js .
+COPY --chown=node:staff app app
 COPY --chown=node:staff acl acl
 
 EXPOSE 53/udp

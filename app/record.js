@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const json = JSON.parse(readFileSync(path.join(dirname, 'package.json')));
+const json = JSON.parse(readFileSync(path.join(dirname, '../package.json')));
 
 export const search = 'jsx.jp';
 export const records = {
