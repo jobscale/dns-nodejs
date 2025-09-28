@@ -42,15 +42,23 @@ const resolver = async (name, type, nss) => {
   return [];
 };
 
-const dnsBind = async (port, bind = '127.0.0.1') => {
-  const forwarder = ['8.8.8.8', '8.8.4.4'];
-  // glue proxy
-  const [ns1] = await resolver('NS1.GSLB13.SAKURA.NE.JP', 'A', forwarder);
-  const [ns2] = await resolver('NS2.GSLB13.SAKURA.NE.JP', 'A', forwarder);
-  const glue = [ns1.data, ns2.data];
-  const cache = {};
+class Nameserver {
+  async createServer(config) {
+    this.cache = {};
+    const { forwarder, glueNS } = config;
+    // glue proxy
+    await Promise.all(
+      glueNS.map(name => resolver(name, 'A', forwarder)),
+    )
+    .then(res => res.map(([item]) => item.data))
+    .then(glue => {
+      this.forwarder = forwarder;
+      this.glue = glue;
+    });
+    return this;
+  }
 
-  const nameserver = async (name, type, opts = { answers: [] }) => {
+  async enter(name, type, opts = { answers: [] }) {
     opts.visited = opts.visited || new Set();
     if (opts.visited.has(name)) {
       logger.warn(`CNAME loop detected for ${name}`);
@@ -88,23 +96,23 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
     } else if (name.endsWith(`.${search}`)) {
       // in search to glue
       const key = `${name}-${type}`;
-      if (!cache[key] || cache[key].expires < now) {
-        cache[key] = await resolver(name, type, glue);
-        const ttl = cache[key].find(item => item.type === 'A')?.ttl || 172800;
-        cache[key].expires = now + ttl;
-        logger.info(`Query for ${name} (${type}) ${JSON.stringify(cache[key])}`);
+      if (!this.cache[key] || this.cache[key].expires < now) {
+        this.cache[key] = await resolver(name, type, this.glue);
+        const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
+        this.cache[key].expires = now + ttl;
+        logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
       }
-      opts.answers.push(...cache[key]);
+      opts.answers.push(...this.cache[key]);
     } else {
       // other to forwarder
       const key = `${name}-${type}`;
-      if (!cache[key] || cache[key].expires < now) {
-        cache[key] = await resolver(name, type, forwarder);
-        const ttl = cache[key].find(item => item.type === 'A')?.ttl || 172800;
-        cache[key].expires = now + ttl;
-        logger.info(`Query for ${name} (${type}) ${JSON.stringify(cache[key])}`);
+      if (!this.cache[key] || this.cache[key].expires < now) {
+        this.cache[key] = await resolver(name, type, this.forwarder);
+        const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
+        this.cache[key].expires = now + ttl;
+        logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
       }
-      opts.answers.push(...cache[key]);
+      opts.answers.push(...this.cache[key]);
     }
 
     if (type !== 'A') return opts.answers;
@@ -114,32 +122,50 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
       return opts.answers;
     }
     await Promise.all(opts.aliases.map(
-      alias => nameserver(alias.data, 'A', opts),
+      alias => this.enter(alias.data, 'A', opts),
     ));
     return opts.answers;
-  };
+  }
 
-  const tcpReceiver = async (buffer, socket) => {
-    const length = buffer.readUInt16BE(0);
-    const msg = buffer.slice(2, 2 + length);
+  async parseDNS(msg) {
     const query = dnsPacket.decode(msg);
     const { id, questions } = query;
     const [question] = questions;
     const name = question.name.toLowerCase();
     const { type } = question;
-    const answers = await nameserver(name, type).catch(e => logger.error(e) || []);
+    const answers = await this.enter(name, type).catch(e => logger.error(e) || []);
     const flags = answers.length ? dnsPacket.RECURSION_AVAILABLE : 0;
     const rcode = answers.length ? 0 : 3;
     const response = dnsPacket.encode({
       type: 'response', id, flags, rcode, questions, answers,
     });
-    const lengthBuf = Buffer.alloc(2);
-    lengthBuf.writeUInt16BE(response.length);
-    socket.write(Buffer.concat([lengthBuf, response]));
+    return response;
+  }
+}
+
+const dnsBind = async (port, bind = '127.0.0.1') => {
+  const nameserver = await new Nameserver().createServer({
+    forwarder: ['8.8.8.8', '8.8.4.4'],
+    glueNS: ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'],
+  });
+
+  const tcpReceiver = async (buffer, socket) => {
+    const length = buffer.readUInt16BE(0);
+    const msg = buffer.slice(2, 2 + length);
+    const response = await nameserver.parseDNS(msg)
+    .catch(e => logger.warn(e.message));
+    if (response) {
+      const lengthBuf = Buffer.alloc(2);
+      lengthBuf.writeUInt16BE(response.length);
+      socket.write(Buffer.concat([lengthBuf, response]));
+    }
     socket.end();
   };
   const tcpConnecter = socket => {
-    socket.on('data', buffer => tcpReceiver(buffer, socket));
+    socket.on('data', buffer => {
+      tcpReceiver(buffer, socket)
+      .catch(e => logger.warn(e.message));
+    });
     socket.on('error', e => logger.error(`TCP socket error: ${e.message}`));
   };
   const tcpServer = net.createServer(tcpConnecter);
@@ -149,20 +175,16 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
 
   const udpServer = dgram.createSocket('udp4');
   const udpReceiver = async (msg, rinfo) => {
-    const query = dnsPacket.decode(msg);
-    const { id, questions } = query;
-    const [question] = questions;
-    const name = question.name.toLowerCase();
-    const { type } = question;
-    const answers = await nameserver(name, type).catch(e => logger.error(e) || []);
-    const flags = answers.length ? dnsPacket.RECURSION_AVAILABLE : 0;
-    const rcode = answers.length ? 0 : 3;
-    const response = dnsPacket.encode({
-      type: 'response', id, flags, rcode, questions, answers,
-    });
-    udpServer.send(response, 0, response.length, rinfo.port, rinfo.address);
+    const response = await nameserver.parseDNS(msg)
+    .catch(e => logger.warn(e.message));
+    if (response) {
+      udpServer.send(response, 0, response.length, rinfo.port, rinfo.address);
+    }
   };
-  udpServer.on('message', udpReceiver);
+  udpServer.on('message', (msg, rinfo) => {
+    udpReceiver(msg, rinfo)
+    .catch(e => logger.warn(e.message));
+  });
   udpServer.bind(port, bind, () => {
     logger.info(`DNS server listening on ${bind} port UDP ${port}`);
   });
