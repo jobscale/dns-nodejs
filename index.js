@@ -1,33 +1,12 @@
 import path from 'path';
 import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import net from 'net';
 import dgram from 'dgram';
 import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
+import { search, records } from './record.js';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
-
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const json = JSON.parse(readFileSync(path.join(dirname, 'package.json')));
-
-const search = 'jsx.jp';
-const records = {
-  version: {
-    TXT: [{ data: json.version, ttl: 300 }],
-  },
-  '@': {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  '*.x': {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  n100: {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  proxy: {
-    A: [{ data: '172.16.6.22', ttl: 300 }],
-  },
-};
 
 const denys = [
   ...readFileSync(path.join(process.cwd(), 'acl/deny-domain')).toString()
@@ -73,14 +52,11 @@ const resolver = async (name, type, nss) => {
 };
 
 const dnsBind = async (port, bind = '127.0.0.1') => {
-  // パブリックフォワード
   const forwarder = ['8.8.8.8', '8.8.4.4'];
-  // 権威サーバプロキシ
+  // glue proxy
   const [ns1] = await resolver('NS1.GSLB13.SAKURA.NE.JP', 'A', forwarder);
   const [ns2] = await resolver('NS2.GSLB13.SAKURA.NE.JP', 'A', forwarder);
   const glue = [ns1.data, ns2.data];
-
-  // キャッシュ
   const cache = {};
 
   const nameserver = async (name, type) => {
@@ -131,8 +107,9 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
     return answers;
   };
 
-  const server = dgram.createSocket('udp4');
-  server.on('message', async (msg, rinfo) => {
+  const tcpReceiver = async (buffer, socket) => {
+    const length = buffer.readUInt16BE(0);
+    const msg = buffer.slice(2, 2 + length);
     const query = dnsPacket.decode(msg);
     const { id, questions } = query;
     const [question] = questions;
@@ -144,11 +121,38 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
     const response = dnsPacket.encode({
       type: 'response', id, flags, rcode, questions, answers,
     });
-    server.send(response, 0, response.length, rinfo.port, rinfo.address);
+    const lengthBuf = Buffer.alloc(2);
+    lengthBuf.writeUInt16BE(response.length);
+    socket.write(Buffer.concat([lengthBuf, response]));
+    socket.end();
+  };
+  const tcpConnecter = socket => {
+    socket.on('data', buffer => tcpReceiver(buffer, socket));
+    socket.on('error', e => logger.error(`TCP socket error: ${e.message}`));
+  };
+  const tcpServer = net.createServer(tcpConnecter);
+  tcpServer.listen(port, bind, () => {
+    logger.info(`DNS server listening on ${bind} port TCP ${port}`);
   });
 
-  server.bind(port, bind, () => {
-    logger.info(`DNS server listening on UDP ${bind} port ${port}`);
+  const udpServer = dgram.createSocket('udp4');
+  const udpReceiver = async (msg, rinfo) => {
+    const query = dnsPacket.decode(msg);
+    const { id, questions } = query;
+    const [question] = questions;
+    const name = question.name.toLowerCase();
+    const { type } = question;
+    const answers = await nameserver(name, type).catch(e => logger.error(e) || []);
+    const flags = answers.length ? dnsPacket.RECURSION_AVAILABLE : 0;
+    const rcode = answers.length ? 0 : 3;
+    const response = dnsPacket.encode({
+      type: 'response', id, flags, rcode, questions, answers,
+    });
+    udpServer.send(response, 0, response.length, rinfo.port, rinfo.address);
+  };
+  udpServer.on('message', udpReceiver);
+  udpServer.bind(port, bind, () => {
+    logger.info(`DNS server listening on ${bind} port UDP ${port}`);
   });
 };
 
