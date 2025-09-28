@@ -68,11 +68,9 @@ const resolveTCP = (name, type, ns) => new Promise((resolve, reject) => {
 const resolver = async (name, type, nss, transport = 'udp') => {
   const resolveFn = transport === 'tcp' ? resolveTCP : resolveUDP;
   for (const ns of nss) {
-    const answers = (
-      await resolveFn(name, type, ns)
-      .catch(e => logger.warn(`${e.message} ${name} ${type}`))
-    ) || [];
-    if (answers.length) return answers;
+    const { answers } = await resolveFn(name, type, ns)
+    .catch(e => logger.warn(`${e.message} ${name} ${type}`) || {});
+    if (answers?.length) return answers;
   }
   return [];
 };
