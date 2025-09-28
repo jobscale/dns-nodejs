@@ -1,6 +1,6 @@
 {
   "name": "dns-nodejs",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "dns, nameserver",
   "main": "app/index.js",
   "scripts": {

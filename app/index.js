@@ -111,6 +111,23 @@ class Nameserver {
     }
 
     const now = Math.floor(Date.now() / 1000);
+
+    const resolverViaCache = async dns => {
+      const key = `${name}-${type}`;
+      if (!this.cache[key] || this.cache[key].expires < now) {
+        this.cache[key] = await resolver(name, type, dns, this.transport);
+        this.cache[key].forEach(item => {
+          // cache minimum 20 minutes and for client
+          const ttl = Number.parseInt(item.ttl, 10) || 0;
+          if (ttl < 1200) item.ttl = 1200;
+        });
+        const expiresIn = Math.max(...this.cache[key].map(item => item.ttl || 0), 1200);
+        this.cache[key].expires = now + expiresIn;
+        logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
+      }
+      opts.answers.push(...this.cache[key]);
+    };
+
     // in records to static
     const exist = Object.keys(records).find(sub => {
       if (name === `${sub}.${search}`) return true;
@@ -129,24 +146,10 @@ class Nameserver {
       logger.info(`Query for ${name} (${type}) ${JSON.stringify(opts.answers)}`);
     } else if (name.endsWith(`.${search}`)) {
       // in search to glue
-      const key = `${name}-${type}`;
-      if (!this.cache[key] || this.cache[key].expires < now) {
-        this.cache[key] = await resolver(name, type, this.glue, this.transport);
-        const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
-        this.cache[key].expires = now + ttl;
-        logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
-      }
-      opts.answers.push(...this.cache[key]);
+      await resolverViaCache(this.glue);
     } else {
       // other to forwarder
-      const key = `${name}-${type}`;
-      if (!this.cache[key] || this.cache[key].expires < now) {
-        this.cache[key] = await resolver(name, type, this.forwarder, this.transport);
-        const ttl = this.cache[key].find(item => item.type === 'A')?.ttl || 172800;
-        this.cache[key].expires = now + ttl;
-        logger.info(`Query for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
-      }
-      opts.answers.push(...this.cache[key]);
+      await resolverViaCache(this.forwarder);
     }
 
     if (type !== 'A') return opts.answers;
