@@ -13,3 +13,10 @@ export const records = {
   n100: [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
   proxy: [{ type: 'CNAME', data: 'dark.jsx.jp', ttl: 300 }],
 };
+
+export const denys = [
+  ...readFileSync(path.join(process.cwd(), 'acl/deny-domain')).toString()
+  .split('\n'),
+  ...readFileSync(path.join(process.cwd(), 'acl/deny-regex')).toString()
+  .split('\n').map(exp => new RegExp(exp)),
+];

@@ -1,19 +1,10 @@
-import path from 'path';
-import { readFileSync } from 'fs';
 import net from 'net';
 import dgram from 'dgram';
 import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
-import { search, records } from './record.js';
+import { search, records, denys } from './record.js';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
-
-const denys = [
-  ...readFileSync(path.join(process.cwd(), 'acl/deny-domain')).toString()
-  .split('\n'),
-  ...readFileSync(path.join(process.cwd(), 'acl/deny-regex')).toString()
-  .split('\n').map(exp => new RegExp(exp)),
-];
 
 const resolveAny = (name, type, ns) => new Promise((resolve, reject) => {
   const query = dnsPacket.encode({
