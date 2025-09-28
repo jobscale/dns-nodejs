@@ -59,7 +59,14 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
   const glue = [ns1.data, ns2.data];
   const cache = {};
 
-  const nameserver = async (name, type) => {
+  const nameserver = async (name, type, opts = { answers: [] }) => {
+    opts.visited = opts.visited || new Set();
+    if (opts.visited.has(name)) {
+      logger.warn(`CNAME loop detected for ${name}`);
+      return opts.answers;
+    }
+    opts.visited.add(name);
+
     const deny = denys.find(exp => name.match(exp));
     if (deny) {
       return [{
@@ -70,21 +77,25 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
       }];
     }
 
-    const answers = [];
     const now = Math.floor(Date.now() / 1000);
-    // 1. 固定レコードを返すドメイン
+    // in records to static
     const exist = Object.keys(records).find(sub => {
       if (name === `${sub}.${search}`) return true;
       if (sub === '@' && name === search) return true;
       if (sub[0] === '*' && name.endsWith(`${sub.slice(1)}.${search}`)) return true;
       return false;
     });
-    if (exist && records[exist][type]) {
-      const ips = records[exist][type];
-      answers.push(...ips.map(({ data, ttl }) => ({ type, name, ttl, data })));
-      logger.info(`Query for ${name} (${type}) ${JSON.stringify(answers)}`);
+    const filter = list => {
+      const std = list.filter(record => record.type === type);
+      const alt = list.filter(record => type === 'A' && record.type === 'CNAME');
+      return [...std, ...alt];
+    };
+    const match = (exist && filter(records[exist])) || [];
+    if (match.length) {
+      opts.answers.push(...match.map(({ type: t, data, ttl }) => ({ type: t, name, ttl, data })));
+      logger.info(`Query for ${name} (${type}) ${JSON.stringify(opts.answers)}`);
     } else if (name.endsWith(`.${search}`)) {
-      // 2. jsx.jp ドメイン → プロキシ
+      // in search to glue
       const key = `${name}-${type}`;
       if (!cache[key] || cache[key].expires < now) {
         cache[key] = await resolver(name, type, glue);
@@ -92,9 +103,9 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
         cache[key].expires = now + ttl;
         logger.info(`Query for ${name} (${type}) ${JSON.stringify(cache[key])}`);
       }
-      answers.push(...cache[key]);
+      opts.answers.push(...cache[key]);
     } else {
-      // 3. その他のドメイン → フォワード
+      // other to forwarder
       const key = `${name}-${type}`;
       if (!cache[key] || cache[key].expires < now) {
         cache[key] = await resolver(name, type, forwarder);
@@ -102,9 +113,19 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
         cache[key].expires = now + ttl;
         logger.info(`Query for ${name} (${type}) ${JSON.stringify(cache[key])}`);
       }
-      answers.push(...cache[key]);
+      opts.answers.push(...cache[key]);
     }
-    return answers;
+
+    if (type !== 'A') return opts.answers;
+    if (opts.aliases?.length) return opts.answers;
+    opts.aliases = opts.answers.filter(item => item.type === 'CNAME');
+    if (!opts.aliases.length || opts.aliases.length !== opts.answers.length) {
+      return opts.answers;
+    }
+    await Promise.all(opts.aliases.map(
+      alias => nameserver(alias.data, 'A', opts),
+    ));
+    return opts.answers;
   };
 
   const tcpReceiver = async (buffer, socket) => {

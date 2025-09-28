@@ -7,19 +7,9 @@ const json = JSON.parse(readFileSync(path.join(dirname, 'package.json')));
 
 export const search = 'jsx.jp';
 export const records = {
-  version: {
-    TXT: [{ data: json.version, ttl: 300 }],
-  },
-  '@': {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  '*.x': {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  n100: {
-    A: [{ data: '172.16.6.66', ttl: 300 }],
-  },
-  proxy: {
-    A: [{ data: '172.16.6.22', ttl: 300 }],
-  },
+  version: [{ type: 'TXT', data: json.version, ttl: 300 }],
+  '@': [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
+  '*.x': [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
+  n100: [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
+  proxy: [{ type: 'CNAME', data: 'dark.jsx.jp', ttl: 300 }],
 };
