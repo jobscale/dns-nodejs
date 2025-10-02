@@ -48,12 +48,11 @@ class Nameserver {
 
     const deny = denys.find(exp => name.match(exp));
     if (deny) {
-      return [{
-        type: 'CNAME',
-        name,
-        ttl: 2592000,
-        data: 'GITHUB.IO',
-      }];
+      return this.enter('GITHUB.IO', 'A', {
+        answers: [{
+          type: 'CNAME', name, ttl: 2592000, data: 'GITHUB.IO',
+        }],
+      });
     }
 
     const now = Math.floor(Date.now() / 1000);
