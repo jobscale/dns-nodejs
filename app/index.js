@@ -100,10 +100,10 @@ class Nameserver {
     }
 
     if (type !== 'A') return opts.answers;
-    if (opts.aliases?.length) {
-      logger.info({ 'multiple recursive CNAME': JSON.stringify(opts.aliases.map(v => v.name)) });
-    }
     opts.aliases = opts.answers.filter(item => item.type === 'CNAME');
+    if (!opts.aliases.length || opts.aliases.length !== opts.answers.length) {
+      return opts.answers;
+    }
     await Promise.all(opts.aliases.map(alias => {
       const normName = alias.data.endsWith('.') ? alias.data.slice(0, -1) : alias.data;
       return this.enter(normName, 'A', opts);
