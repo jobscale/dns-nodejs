@@ -74,12 +74,14 @@ class Nameserver {
     };
 
     // in records to static
-    const exist = Object.keys(records).find(sub => {
-      if (name === `${sub}.${search}`) return true;
-      if (sub === '@' && name === search) return true;
-      if (sub[0] === '*' && name.endsWith(`${sub.slice(1)}.${search}`)) return true;
-      return false;
-    });
+    const candidates = Object.keys(records).map(sub => {
+      if (sub === '@' && name === search) return { sub, priority: 1 };
+      if (name === `${sub}.${search}`) return { sub, priority: 10 };
+      if (sub[0] === '*' && name.endsWith(`${sub.slice(1)}.${search}`)) return { sub, priority: 100 };
+      return undefined;
+    }).filter(Boolean).sort((a, b) => a.priority - b.priority);
+    // choice via priority
+    const exist = candidates[0]?.sub;
     const filter = list => {
       const std = list.filter(record => record.type === type);
       const alt = list.filter(record => type === 'A' && record.type === 'CNAME');
@@ -98,14 +100,17 @@ class Nameserver {
     }
 
     if (type !== 'A') return opts.answers;
-    if (opts.aliases?.length) return opts.answers;
+    if (opts.aliases?.length) {
+      logger.info({ 'multiple recursive CNAME': JSON.stringify(opts.aliases.map(v => v.name)) });
+    }
     opts.aliases = opts.answers.filter(item => item.type === 'CNAME');
     if (!opts.aliases.length || opts.aliases.length !== opts.answers.length) {
       return opts.answers;
     }
-    await Promise.all(opts.aliases.map(
-      alias => this.enter(alias.data, 'A', opts),
-    ));
+    await Promise.all(opts.aliases.map(alias => {
+      const normName = alias.data.endsWith('.') ? alias.data.slice(0, -1) : alias.data;
+      return this.enter(normName, 'A', opts);
+    }));
     return opts.answers;
   }
 

@@ -1,23 +1,33 @@
 import path from 'path';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { createLogger } from '@jobscale/logger';
 import { recordList } from './records.js';
 
+const logger = createLogger('info', { noPathName: true, timestamp: true });
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const json = JSON.parse(readFileSync(path.join(dirname, '../package.json')));
 
 export const search = 'jsx.jp';
 export const records = {
   version: [{ type: 'TXT', data: json.version, ttl: 300 }],
-  '@': [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
-  '*.x': [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
-  n100: [{ type: 'A', data: '172.16.6.66', ttl: 300 }],
-  proxy: [{ type: 'CNAME', data: 'dark.jsx.jp', ttl: 300 }],
+  'alias-1': [{ type: 'CNAME', data: 'alias-2.jsx.jp.', ttl: 300 }],
+  'alias-2': [{ type: 'CNAME', data: 'alias-3.jsx.jp.', ttl: 300 }],
+  'alias-3': [{ type: 'CNAME', data: 'alias-4.jsx.jp.', ttl: 300 }],
+  'alias-4': [{ type: 'CNAME', data: 'alias-5.jsx.jp.', ttl: 300 }],
 };
 
 recordList.forEach(item => {
   const { Name: name, Type: type, RData: data, TTL: ttl } = item;
   if (!records[name]) records[name] = [];
+  if (records[name].find(v => v.type.toUpperCase() === 'CNAME')) {
+    logger.warn({ 'Already CNAME': JSON.stringify(item) });
+    return;
+  }
+  if (records[name].length && type.toUpperCase() === 'CNAME') {
+    logger.warn({ 'Already Multiple CNAME': JSON.stringify(item) });
+    return;
+  }
   records[name].push({ type, data, ttl });
 });
 
