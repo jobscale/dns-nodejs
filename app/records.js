@@ -1,0 +1,288 @@
+export const recordList = [{
+  Name: '*',
+  Type: 'CNAME',
+  RData: 'us.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: '20250705',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: '@',
+  Type: 'A',
+  RData: '216.24.57.4',
+  TTL: 120,
+}, {
+  Name: '@',
+  Type: 'MX',
+  RData: '10 inbound-smtp.us-east-1.amazonaws.com.',
+  TTL: 120,
+}, {
+  Name: '@',
+  Type: 'TXT',
+  RData: 'v=spf1 include:amazonses.com ~all',
+  TTL: 120,
+}, {
+  Name: '_dmarc',
+  Type: 'TXT',
+  RData: 'v=DMARC1;p=quarantine;pct=100;fo=1',
+  TTL: 120,
+}, {
+  Name: 'a',
+  Type: 'A',
+  RData: '127.0.0.1',
+  TTL: 120,
+}, {
+  Name: '*.a',
+  Type: 'CNAME',
+  RData: 'a.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'black',
+  Type: 'A',
+  RData: '172.16.6.22',
+  TTL: 120,
+}, {
+  Name: '*.black',
+  Type: 'CNAME',
+  RData: 'black.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'chat-mqtt-cool.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'clock.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'doom.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'fake.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'lineage.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'maintenance.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'mqtt.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'paycard.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'site.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'snow.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'tetris.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'timer.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'todo.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'todo-vue.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'totp.cdn',
+  Type: 'CNAME',
+  RData: 'jobscale.github.io.',
+  TTL: 120,
+}, {
+  Name: 'web.cdn',
+  Type: 'CNAME',
+  RData: 'web-tkl4.onrender.com.',
+  TTL: 120,
+}, {
+  Name: 'cms',
+  Type: 'A',
+  RData: '142.250.207.99',
+  TTL: 120,
+}, {
+  Name: 'dark',
+  Type: 'A',
+  RData: '172.16.6.77',
+  TTL: 120,
+}, {
+  Name: 'in',
+  Type: 'A',
+  RData: '172.16.6.25',
+  TTL: 120,
+}, {
+  Name: '*.in',
+  Type: 'CNAME',
+  RData: 'in.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'jp',
+  Type: 'A',
+  RData: '34.97.110.212',
+  TTL: 120,
+}, {
+  Name: '*.jp',
+  Type: 'CNAME',
+  RData: 'jp.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'kali',
+  Type: 'A',
+  RData: '172.16.6.33',
+  TTL: 120,
+}, {
+  Name: '*.kali',
+  Type: 'CNAME',
+  RData: 'kali.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'mac',
+  Type: 'A',
+  RData: '172.16.6.88',
+  TTL: 120,
+}, {
+  Name: '*.mac',
+  Type: 'CNAME',
+  RData: 'mac.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'mx',
+  Type: 'MX',
+  RData: '10 feedback-smtp.eu-west-1.amazonses.com.',
+  TTL: 120,
+}, {
+  Name: 'mx',
+  Type: 'TXT',
+  RData: 'v=spf1 include:amazonses.com ~all',
+  TTL: 120,
+}, {
+  Name: 'n100',
+  Type: 'A',
+  RData: '172.16.6.66',
+  TTL: 120,
+}, {
+  Name: '*.n100',
+  Type: 'CNAME',
+  RData: 'n100.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'noble',
+  Type: 'A',
+  RData: '54.205.185.5',
+  TTL: 120,
+}, {
+  Name: 'proxy',
+  Type: 'CNAME',
+  RData: 'dark.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: '*.proxy',
+  Type: 'CNAME',
+  RData: 'proxy.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'regale',
+  Type: 'A',
+  RData: '110.4.133.233',
+  TTL: 120,
+}, {
+  Name: 's',
+  Type: 'CNAME',
+  RData: 'ujcjp.onrender.com.',
+  TTL: 120,
+}, {
+  Name: 'site',
+  Type: 'CNAME',
+  RData: 'web-tkl4.onrender.com.',
+  TTL: 120,
+}, {
+  Name: 'smtp',
+  Type: 'CNAME',
+  RData: 'smtp.mail.eu-west-1.awsapps.com.',
+  TTL: 120,
+}, {
+  Name: 'us',
+  Type: 'A',
+  RData: '54.205.185.5',
+  TTL: 120,
+}, {
+  Name: '*.us',
+  Type: 'CNAME',
+  RData: 'us.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'vpn',
+  Type: 'A',
+  RData: '54.205.185.5',
+  TTL: 120,
+}, {
+  Name: 'web',
+  Type: 'CNAME',
+  RData: 'web-tkl4.onrender.com.',
+  TTL: 120,
+}, {
+  Name: 'wifi',
+  Type: 'A',
+  RData: '172.16.6.77',
+  TTL: 120,
+}, {
+  Name: 'win',
+  Type: 'A',
+  RData: '172.16.6.99',
+  TTL: 120,
+}, {
+  Name: '*.win',
+  Type: 'CNAME',
+  RData: 'win.jsx.jp.',
+  TTL: 120,
+}, {
+  Name: 'x',
+  Type: 'A',
+  RData: '172.16.6.66',
+  TTL: 120,
+}, {
+  Name: '*.x',
+  Type: 'CNAME',
+  RData: 'x.jsx.jp.',
+  TTL: 120,
+}];
+
+export default { recordList };
