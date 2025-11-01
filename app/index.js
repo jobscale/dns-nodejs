@@ -76,7 +76,14 @@ class Nameserver {
       if (!match.length) return undefined;
       if (sub === '@' && name === search) return { list: match, priority: 1 };
       if (name === `${sub}.${search}`) return { list: match, priority: 10 };
-      if (sub.startsWith('*') && name.endsWith(`${sub.slice(1)}.${search}`)) return { list: match, priority: 100 };
+      if (sub.startsWith('*.')) {
+        const wildcardSuffix = `${sub.slice(1)}.${search}`;
+        const expectedLabels = wildcardSuffix.split('.').length;
+        const nameLabels = name.split('.').length;
+        if (name.endsWith(wildcardSuffix) && nameLabels === expectedLabels) {
+          return { list: match, priority: 100 };
+        }
+      }
       return undefined;
     }).filter(Boolean).sort((a, b) => a.priority - b.priority);
     // choice via priority if exist
