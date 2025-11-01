@@ -37,3 +37,11 @@ export const denys = [
   ...readFileSync(path.join(process.cwd(), 'acl/deny-regex')).toString()
   .split('\n').map(exp => new RegExp(exp)),
 ];
+
+export const denyHost = name => [
+  'GITHUB.IO', 'A', {
+    answers: [{
+      name, type: 'CNAME', ttl: 2592000, data: 'GITHUB.IO',
+    }],
+  },
+];

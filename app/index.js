@@ -3,7 +3,7 @@ import dgram from 'dgram';
 import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
 import { resolver } from './resolver.js';
-import { search, records, denys } from './record.js';
+import { search, records, denys, denyHost } from './record.js';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 
@@ -39,7 +39,7 @@ class Nameserver {
   }
 
   async enter(name, type, opts = { answers: [] }) {
-    opts.visited = opts.visited || new Set();
+    if (!opts.visited) opts.visited = new Set();
     if (opts.visited.has(name)) {
       logger.warn(`CNAME loop detected for ${name}`);
       return opts.answers;
@@ -47,13 +47,7 @@ class Nameserver {
     opts.visited.add(name);
 
     const deny = denys.find(exp => name.match(exp));
-    if (deny) {
-      return this.enter('GITHUB.IO', 'A', {
-        answers: [{
-          type: 'CNAME', name, ttl: 2592000, data: 'GITHUB.IO',
-        }],
-      });
-    }
+    if (deny) return this.enter(...denyHost(name));
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -74,22 +68,23 @@ class Nameserver {
     };
 
     // in records to static
-    const candidates = Object.keys(records).map(sub => {
-      if (sub === '@' && name === search) return { sub, priority: 1 };
-      if (name === `${sub}.${search}`) return { sub, priority: 10 };
-      if (sub[0] === '*' && name.endsWith(`${sub.slice(1)}.${search}`)) return { sub, priority: 100 };
+    const candidates = Object.entries(records).map(([sub, list]) => {
+      const match = list.filter(v => {
+        if (v.type === type) return true;
+        return type === 'A' && v.type === 'CNAME';
+      });
+      if (!match.length) return undefined;
+      if (sub === '@' && name === search) return { list: match, priority: 1 };
+      if (name === `${sub}.${search}`) return { list: match, priority: 10 };
+      if (sub.startsWith('*') && name.endsWith(`${sub.slice(1)}.${search}`)) return { list: match, priority: 100 };
       return undefined;
     }).filter(Boolean).sort((a, b) => a.priority - b.priority);
-    // choice via priority
-    const exist = candidates[0]?.sub;
-    const filter = list => {
-      const std = list.filter(record => record.type === type);
-      const alt = list.filter(record => type === 'A' && record.type === 'CNAME');
-      return [...std, ...alt];
-    };
-    const match = (exist && filter(records[exist])) || [];
-    if (match.length) {
-      opts.answers.push(...match.map(({ type: t, data, ttl }) => ({ type: t, name, ttl, data })));
+    // choice via priority if exist
+    const [exist] = candidates;
+    if (exist) {
+      exist.list.forEach(item => {
+        opts.answers.push({ name, ...item });
+      });
       logger.info(`Query for ${name} (${type}) ${JSON.stringify(opts.answers)}`);
     } else if (name.endsWith(`.${search}`)) {
       // in search to glue
@@ -100,11 +95,16 @@ class Nameserver {
     }
 
     if (type !== 'A') return opts.answers;
-    opts.aliases = opts.answers.filter(item => item.type === 'CNAME');
-    if (!opts.aliases.length || opts.aliases.length !== opts.answers.length) {
+    if (!opts.resolved) opts.resolved = [];
+    opts.aliases = opts.answers.filter(item => {
+      if (opts.resolved.find(v => v.data === item.data)) return false;
+      return item.type === 'CNAME';
+    });
+    if (!opts.aliases.length) {
       return opts.answers;
     }
     await Promise.all(opts.aliases.map(alias => {
+      opts.resolved.push(alias);
       const normName = alias.data.endsWith('.') ? alias.data.slice(0, -1) : alias.data;
       return this.enter(normName, 'A', opts);
     }));
