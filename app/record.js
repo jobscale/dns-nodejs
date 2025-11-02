@@ -8,6 +8,22 @@ const logger = createLogger('info', { noPathName: true, timestamp: true });
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const json = JSON.parse(readFileSync(path.join(dirname, '../package.json')));
 
+export const forwarder = ['8.8.8.8', '8.8.4.4'];
+export const glueNS = ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'];
+export const authority = {
+  name: 'jp',
+  type: 'SOA',
+  ttl: 1200,
+  data: {
+    mname: 'z.dns.jp',
+    rname: 'root.dns.jp',
+    serial: Math.floor(Date.now() / 10000),
+    refresh: 3600,
+    retry: 900,
+    expire: 1814400,
+    minimum: 900,
+  },
+};
 export const search = 'jsx.jp';
 export const records = {
   version: [{ type: 'TXT', data: json.version, ttl: 300 }],
