@@ -1,12 +1,13 @@
 {
   "name": "dns-nodejs",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "dns, nameserver",
   "main": "app/index.js",
+  "type": "module",
   "scripts": {
     "start": "node .",
     "lint": "eslint .",
-    "test": "npm run lint"
+    "test": "npm run lint && BIND=false node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles"
   },
   "repository": {
     "type": "git",
@@ -21,9 +22,12 @@
   "homepage": "https://github.com/jobscale/dns-nodejs#readme",
   "dependencies": {
     "@jobscale/logger": "^0.8.4",
-    "dns-packet": "^5.6.1",
+    "dns-packet": "^5.6.1"
+  },
+  "devDependencies": {
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-plugin-import": "^2.32.0"
+    "eslint-plugin-import": "^2.32.0",
+    "jest": "^30.2.0"
   }
 }

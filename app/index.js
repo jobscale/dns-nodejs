@@ -4,16 +4,15 @@ import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
 import { resolver } from './resolver.js';
 import {
-  search, records, denys, denyHost, forwarder, glueNS, authority,
+  searches, records, denys, denyHost, forwarder, glueNS, authority,
 } from './record.js';
 
+const { PORT, BIND } = process.env;
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 
-class Nameserver {
+export class Nameserver {
   constructor() {
     this.cache = {};
-    const rand = Math.floor(Math.random() * 3600);
-    setInterval(() => this.clean(), (3600 + rand) * 1000);
   }
 
   clean() {
@@ -37,7 +36,38 @@ class Nameserver {
       this.forwarder = forwarder;
       this.glue = glue;
     });
+    const rand = Math.floor(Math.random() * 3600);
+    this.intervalId = setInterval(() => this.clean(), (3600 + rand) * 1000);
     return this;
+  }
+
+  terminate() {
+    clearInterval(this.intervalId);
+    delete this.intervalId;
+  }
+
+  searchRecords(name, type, search, recordSet) {
+    const candidates = Object.entries(recordSet).map(([sub, list]) => {
+      const match = list.filter(v => {
+        if (v.type === type) return true;
+        return type === 'A' && v.type === 'CNAME';
+      });
+      if (!match.length) return undefined;
+      if (sub === '@' && name === search) return { list: match, priority: 1 };
+      if (name === `${sub}.${search}`) return { list: match, priority: 10 };
+      if (sub.startsWith('*')) {
+        const wildcardSuffix = `${sub.slice(1)}.${search}`;
+        const expectedLabels = wildcardSuffix.split('.').length;
+        const nameLabels = name.split('.').length;
+        if (name.endsWith(wildcardSuffix) && nameLabels === expectedLabels) {
+          return { list: match, priority: 100 };
+        }
+      }
+      return undefined;
+    }).filter(Boolean).sort((a, b) => a.priority - b.priority);
+    // choice via priority if exist
+    const [exist] = candidates;
+    return exist;
   }
 
   async enter(name, type, opts = { answers: [] }) {
@@ -71,34 +101,20 @@ class Nameserver {
       opts.authorities = authorities;
     };
 
-    // in records to static
-    const candidates = Object.entries(records).map(([sub, list]) => {
-      const match = list.filter(v => {
-        if (v.type === type) return true;
-        return type === 'A' && v.type === 'CNAME';
-      });
-      if (!match.length) return undefined;
-      if (sub === '@' && name === search) return { list: match, priority: 1 };
-      if (name === `${sub}.${search}`) return { list: match, priority: 10 };
-      if (sub.startsWith('*')) {
-        const wildcardSuffix = `${sub.slice(1)}.${search}`;
-        const expectedLabels = wildcardSuffix.split('.').length;
-        const nameLabels = name.split('.').length;
-        if (name.endsWith(wildcardSuffix) && nameLabels === expectedLabels) {
-          return { list: match, priority: 100 };
-        }
-      }
-      return undefined;
-    }).filter(Boolean).sort((a, b) => a.priority - b.priority);
-    // choice via priority if exist
-    const [exist] = candidates;
+    // in record to static
+    const exist = Object.entries(records).reduce((accumulate, [search, recordSet]) => {
+      if (accumulate) return accumulate;
+      const myself = name === search || name.endsWith(`.${search}`);
+      if (!myself) return undefined;
+      return this.searchRecords(name, type, search, recordSet);
+    }, undefined);
     if (exist) {
       exist.list.forEach(item => {
         opts.answers.push({ name, ...item });
       });
       logger.info(`Static for ${name} (${type}) ${JSON.stringify(opts.answers)}`);
       if (!opts.authorities) opts.authorities = [authority];
-    } else if (name.endsWith(`.${search}`)) {
+    } else if (searches.find(search => name.endsWith(`.${search}`))) {
       // in search to glue
       await resolverViaCache(this.glue);
       // finish resolve do not recursive
@@ -110,6 +126,14 @@ class Nameserver {
       return opts;
     }
 
+    if (type === 'MX') {
+      opts.answers = opts.answers.map(answer => {
+        if (typeof answer.data !== 'string') return answer;
+        const [preference, exchange] = answer.data.split(' ');
+        return { ...answer, data: { preference, exchange } };
+      });
+      return opts;
+    }
     if (type !== 'A') return opts;
     if (!opts.resolved) opts.resolved = [];
     opts.aliases = opts.answers.filter(item => {
@@ -190,4 +214,8 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
   });
 };
 
-dnsBind(53, '0.0.0.0');
+if (BIND !== 'false') dnsBind(Number(PORT) || 53, '0.0.0.0');
+
+export default {
+  Nameserver,
+};

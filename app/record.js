@@ -24,27 +24,27 @@ export const authority = {
     minimum: 900,
   },
 };
-export const search = 'jsx.jp';
-export const records = {
-  version: [{ type: 'TXT', data: json.version, ttl: 300 }],
-  'alias-1': [{ type: 'CNAME', data: 'alias-2.jsx.jp.', ttl: 300 }],
-  'alias-2': [{ type: 'CNAME', data: 'alias-3.jsx.jp.', ttl: 300 }],
-  'alias-3': [{ type: 'CNAME', data: 'alias-4.jsx.jp.', ttl: 300 }],
-  'alias-4': [{ type: 'CNAME', data: 'alias-5.jsx.jp.', ttl: 300 }],
-};
+export const searches = Object.keys(recordList);
+export const records = {};
 
-recordList.forEach(item => {
-  const { Name: name, Type: type, RData: data, TTL: ttl } = item;
-  if (!records[name]) records[name] = [];
-  if (records[name].find(v => v.type.toUpperCase() === 'CNAME')) {
-    logger.warn({ 'Already CNAME': JSON.stringify(item) });
-    return;
-  }
-  if (records[name].length && type.toUpperCase() === 'CNAME') {
-    logger.warn({ 'Already Multiple CNAME': JSON.stringify(item) });
-    return;
-  }
-  records[name].push({ type, data, ttl });
+const setupSearch = (search, record) => {
+  recordList[search].forEach(item => {
+    const { Name: name, Type: type, RData: data, TTL: ttl } = item;
+    if (!record[name]) record[name] = [];
+    if (record[name].find(v => v.type.toUpperCase() === 'CNAME')) {
+      logger.warn({ 'Already CNAME': JSON.stringify(item) });
+      return;
+    }
+    if (record[name].length && type.toUpperCase() === 'CNAME') {
+      logger.warn({ 'Already Multiple CNAME': JSON.stringify(item) });
+      return;
+    }
+    record[name].push({ type, data, ttl });
+  });
+};
+searches.forEach(search => {
+  records[search] = { version: [{ type: 'TXT', data: json.version, ttl: 300 }] };
+  setupSearch(search, records[search]);
 });
 
 export const denys = [

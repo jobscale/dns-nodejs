@@ -1,3 +1,15 @@
+FROM node:lts-trixie-slim AS test
+SHELL ["bash", "-c"]
+WORKDIR /home/node
+
+USER node
+COPY --chown=node:staff package.json .
+RUN npm i
+COPY --chown=node:staff app app
+COPY --chown=node:staff acl acl
+COPY --chown=node:staff __test__ __test__
+RUN npm test
+
 FROM node:lts-trixie-slim
 SHELL ["bash", "-c"]
 WORKDIR /home/node
