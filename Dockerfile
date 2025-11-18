@@ -7,6 +7,7 @@ COPY --chown=node:staff package.json .
 RUN npm i
 COPY --chown=node:staff app app
 COPY --chown=node:staff acl acl
+COPY --chown=node:staff db db
 COPY --chown=node:staff __test__ __test__
 RUN npm test
 
@@ -24,6 +25,7 @@ COPY --chown=node:staff package.json .
 RUN npm i --omit=dev
 COPY --chown=node:staff app app
 COPY --chown=node:staff acl acl
+COPY --chown=node:staff db db
 
 USER root
 EXPOSE 53/udp

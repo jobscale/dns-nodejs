@@ -1,0 +1,26 @@
+[
+  {
+    "Name": "dark",
+    "Type": "A",
+    "RData": "172.16.6.77",
+    "TTL": 122
+  },
+  {
+    "Name": "bookworm",
+    "Type": "A",
+    "RData": "172.16.6.25",
+    "TTL": 122
+  },
+  {
+    "Name": "trixie",
+    "Type": "A",
+    "RData": "172.16.6.107",
+    "TTL": 122
+  },
+  {
+    "Name": "mac",
+    "Type": "A",
+    "RData": "172.16.6.88",
+    "TTL": 122
+  }
+]

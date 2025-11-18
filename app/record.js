@@ -1,12 +1,11 @@
 import path from 'path';
-import { readFileSync } from 'fs';
+import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { createLogger } from '@jobscale/logger';
-import { recordList } from './records.js';
 
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const json = JSON.parse(readFileSync(path.join(dirname, '../package.json')));
+const json = JSON.parse(await fs.readFile(path.join(dirname, '../package.json')));
 
 export const forwarder = ['8.8.8.8', '8.8.4.4'];
 export const glueNS = ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'];
@@ -24,11 +23,21 @@ export const authority = {
     minimum: 900,
   },
 };
-export const searches = Object.keys(recordList);
+
+const dirPath = path.join(process.cwd(), 'db');
+const files = await fs.readdir(dirPath);
+const jsonFiles = files.filter(file => path.extname(file) === '.json');
+const dbList = await Promise.all(jsonFiles.map(async file => {
+  const search = path.basename(file, '.json');
+  const record = JSON.parse((await fs.readFile(path.join(dirPath, file))).toString());
+  return { search, record };
+}));
+
+export const searches = dbList.map(db => db.search);
 export const records = {};
 
 const setupSearch = (search, record) => {
-  recordList[search].forEach(item => {
+  dbList.find(db => db.search === search).record.forEach(item => {
     const { Name: name, Type: type, RData: data, TTL: ttl } = item;
     if (!record[name]) record[name] = [];
     if (record[name].find(v => v.type.toUpperCase() === 'CNAME')) {
@@ -48,9 +57,9 @@ searches.forEach(search => {
 });
 
 export const denys = [
-  ...readFileSync(path.join(process.cwd(), 'acl/deny-domain')).toString()
+  ...(await fs.readFile(path.join(process.cwd(), 'acl/deny-domain'))).toString()
   .split('\n'),
-  ...readFileSync(path.join(process.cwd(), 'acl/deny-regex')).toString()
+  ...(await fs.readFile(path.join(process.cwd(), 'acl/deny-regex'))).toString()
   .split('\n').map(exp => new RegExp(exp)),
 ];
 

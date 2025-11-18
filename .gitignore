@@ -67,7 +67,6 @@ typings/
 .next
 
 .vscode/
-db/
 package-lock.json
 
 .space
