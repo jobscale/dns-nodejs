@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node .",
     "lint": "eslint .",
-    "test": "npm run lint && BIND=false node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles"
+    "test": "npm run lint && BIND=false node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles --runInBand --coverage --collectCoverage"
   },
   "repository": {
     "type": "git",
@@ -26,7 +26,6 @@
   },
   "devDependencies": {
     "eslint": "^8.57.1",
-    "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.32.0",
     "jest": "^30.2.0"
   }
