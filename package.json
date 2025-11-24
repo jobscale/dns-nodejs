@@ -18,7 +18,7 @@
   "scripts": {
     "start": "node app/index.js",
     "lint": "eslint",
-    "test": "date -Iseconds && node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles --runInBand --coverage --collectCoverage"
+    "test": "date -Iseconds && BIND=false node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles --runInBand --coverage --collectCoverage"
   },
   "pre-commit": "test",
   "dependencies": {
