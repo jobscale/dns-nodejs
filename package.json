@@ -21,6 +21,11 @@
     "test": "date -Iseconds && BIND=false node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles --runInBand --coverage --collectCoverage"
   },
   "pre-commit": "test",
+  "jest": {
+    "coveragePathIgnorePatterns": [
+      "app/resolver.js"
+    ]
+  },
   "dependencies": {
     "@jobscale/logger": "^0.10.1",
     "dns-packet": "^5.6.1"
