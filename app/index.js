@@ -214,7 +214,7 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
   });
 };
 
-if (BIND !== 'false') dnsBind(Number(PORT) || 53, '0.0.0.0');
+if (BIND !== 'false') dnsBind(Number.parseInt(PORT, 10) || 53, '0.0.0.0');
 
 export default {
   Nameserver,

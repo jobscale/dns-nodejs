@@ -51,7 +51,7 @@ describe('Nameserver enter() actual name resolution tests', () => {
     const mx = result.answers.find(a => a.type === 'MX');
     expect(mx).toBeDefined();
     expect(mx.data.exchange).toMatch(/amazonaws\.com/);
-    expect(Number(mx.data.preference)).toBeGreaterThan(0);
+    expect(Number.parseInt(mx.data.preference, 10)).toBeGreaterThan(0);
   });
 
   const LIST = [
