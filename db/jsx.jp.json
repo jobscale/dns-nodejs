@@ -1,11 +1,5 @@
 [
   {
-    "Name": "*",
-    "Type": "CNAME",
-    "RData": "us.jsx.jp.",
-    "TTL": 122
-  },
-  {
     "Name": "20250705",
     "Type": "CNAME",
     "RData": "jobscale.github.io.",
