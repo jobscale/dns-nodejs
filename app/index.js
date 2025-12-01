@@ -87,12 +87,15 @@ export class Nameserver {
       const key = `${name}-${type}`;
       if (!this.cache[key] || this.cache[key].expires < now) {
         this.cache[key] = await resolver(name, type, dns, this.transport);
-        this.cache[key].answers.forEach(item => {
+        const recordA = this.cache[key].answers.filter(item => item.type === 'A');
+        recordA.forEach(item => {
           // cache minimum 20 minutes and for client
           const ttl = Number.parseInt(item.ttl, 10) || 0;
           if (ttl < 1200) item.ttl = 1200;
         });
-        const expiresIn = Math.max(...this.cache[key].answers.map(item => item.ttl ?? 0), 1200);
+        const expiresIn = recordA.length
+          ? Math.max(...this.cache[key].answers.map(item => item.ttl ?? 0), 1200)
+          : 120;
         this.cache[key].expires = now + expiresIn;
         logger.info(`Query resolver for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
       }
