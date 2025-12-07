@@ -1,30 +1,33 @@
-import globals from 'globals';
-import standard from '@jobscale/eslint-plugin-standard';
 import jestPlugin from 'eslint-plugin-jest';
+import standard from '@jobscale/eslint-plugin-standard';
 
 export default [{
-  ignores: ['**/coverage/**', '**/assets/**', '**/*.min.js'],
+  ignores: [
+    ...standard.configs.standard.ignores,
+  ],
 }, {
-  ...standard.configs.standard,
-  name: 'standard base rule',
+  ...standard.configs.node,
+  name: 'node rule',
+  files: ['**/*.js'],
   rules: {
-    ...standard.configs.standard.rules,
+    ...standard.rules,
   },
 }, {
+  ...standard.configs.browser,
+  name: 'browser rule',
+  files: ['docs/**/*.js', 'public/**/*.js', 'src/**/*.js'],
+  rules: {
+    ...standard.rules,
+  },
+}, {
+  ...standard.configs.jest,
   name: 'jest rule',
   files: ['**/*.test.js', '**/__tests__/**/*.js'],
-  languageOptions: {
-    sourceType: 'module',
-    ecmaVersion: 'latest',
-    globals: {
-      ...globals.node,
-      ...globals.jest,
-    },
-  },
   plugins: {
     jest: jestPlugin,
   },
   rules: {
+    ...standard.rules,
     ...jestPlugin.configs.recommended.rules,
     'jest/no-disabled-tests': 'warn',
     'jest/no-focused-tests': 'error',
