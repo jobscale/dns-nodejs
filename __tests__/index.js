@@ -150,6 +150,49 @@ describe('Nameserver enter() actual name resolution tests', () => {
           });
         });
       });
+
+      describe('deny-regex domain check', () => {
+        // deny-regex file contains regex patterns for matching domain names
+        // Examples: -ad-, -ads., .ads-, googleads., .yimg.jp, ads.g.doubleclick.net
+        // When a domain matches a deny-regex pattern, it should be processed as denyHost
+        // denyHost function returns a CNAME record redirecting to GITHUB.IO
+        test('should identify domain matching deny-regex pattern -ad- as denyHost candidate', async () => {
+          // test-ad-domain.com contains "-ad-" which matches the pattern in deny-regex file
+          // The nameserver should invoke denyHost function for this domain
+          const result = await ns.enter('test-ad-domain.com', 'A');
+
+          // When denyHost is invoked, it returns a CNAME record from the original domain to GITHUB.IO
+          expect(result).toBeDefined();
+          expect(result.answers).toBeDefined();
+
+          // Look for CNAME record created by denyHost function
+          const cnameFromDenyHost = result.answers.find(answer =>
+            answer.type === 'CNAME' &&
+            answer.name === 'test-ad-domain.com' &&
+            answer.data === 'GITHUB.IO' &&
+            answer.ttl === 2592000,
+          );
+
+          expect(cnameFromDenyHost).toBeDefined();
+        });
+
+        test('should apply denyHost function to domains matching deny-regex patterns', async () => {
+          // banner-ads.com contains "-ads." pattern from deny-regex
+          const result = await ns.enter('banner-ads.com', 'A');
+
+          expect(result).toBeDefined();
+          expect(result.answers).toBeDefined();
+
+          // Should have CNAME from denyHost function
+          const denyHostRecord = result.answers.find(a =>
+            a.type === 'CNAME' &&
+            a.data === 'GITHUB.IO',
+          );
+
+          expect(denyHostRecord).toBeDefined();
+          expect(denyHostRecord.ttl).toBe(2592000);
+        });
+      });
     });
   });
 });

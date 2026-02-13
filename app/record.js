@@ -58,9 +58,9 @@ searches.forEach(search => {
 
 export const denys = [
   ...(await fs.readFile(path.join(process.cwd(), 'acl/deny-domain'))).toString()
-  .split('\n'),
+  .split('\n').filter(line => line.trim()),
   ...(await fs.readFile(path.join(process.cwd(), 'acl/deny-regex'))).toString()
-  .split('\n').map(exp => new RegExp(exp)),
+  .split('\n').filter(line => line.trim()).map(exp => new RegExp(exp)),
 ];
 
 export const denyHost = name => [
