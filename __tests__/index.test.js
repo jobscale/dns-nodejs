@@ -14,42 +14,42 @@ describe('Nameserver enter() actual name resolution tests', () => {
   ['first check', 'cache check'].forEach(type => {
     describe(`${type} phase`, () => {
       describe('static ip address', () => {
-        test('should follow TXT record for version.internal', async () => {
+        it('should follow TXT record for version.internal', async () => {
           const result = await ns.enter('version.internal', 'TXT');
           const follow = result.answers.find(a => a.type === 'TXT');
           expect(follow).toBeDefined();
           expect(/^\d+\.\d+\.\d+$/.test(follow.data)).toBe(true);
         });
 
-        test('should resolve internal domain dark.internal with A record', async () => {
+        it('should resolve internal domain dark.internal with A record', async () => {
           const result = await ns.enter('dark.internal', 'A');
           const answer = result.answers.find(a => a.name === 'dark.internal');
           expect(answer).toBeDefined();
           expect(answer.data).toBe('172.16.6.77');
         });
 
-        test('should follow TXT record for version.jsx.jp', async () => {
+        it('should follow TXT record for version.jsx.jp', async () => {
           const result = await ns.enter('version.jsx.jp', 'TXT');
           const follow = result.answers.find(a => a.type === 'TXT');
           expect(follow).toBeDefined();
           expect(/^\d+\.\d+\.\d+$/.test(follow.data)).toBe(true);
         });
 
-        test('should resolve root domain jsx.jp with A record', async () => {
+        it('should resolve root domain jsx.jp with A record', async () => {
           const result = await ns.enter('jsx.jp', 'A');
           const answer = result.answers.find(a => a.name === 'jsx.jp');
           expect(answer).toBeDefined();
           expect(answer.data).toBe('216.24.57.4');
         });
 
-        test('should follow CNAME record for jsx.jp', async () => {
+        it('should follow CNAME record for jsx.jp', async () => {
           const result = await ns.enter('cdn.jsx.jp', 'A');
           const cname = result.answers.find(a => a.type === 'CNAME');
           expect(cname).toBeDefined();
           expect(cname.data).toBe('jobscale.github.io.');
         });
 
-        test('should resolve MX record for jsx.jp', async () => {
+        it('should resolve MX record for jsx.jp', async () => {
           const result = await ns.enter('jsx.jp', 'MX');
           const mx = result.answers.find(a => a.type === 'MX');
           expect(mx).toBeDefined();
@@ -156,7 +156,7 @@ describe('Nameserver enter() actual name resolution tests', () => {
         // Examples: -ad-, -ads., .ads-, googleads., .yimg.jp, ads.g.doubleclick.net
         // When a domain matches a deny-regex pattern, it should be processed as denyHost
         // denyHost function returns a CNAME record redirecting to GITHUB.IO
-        test('should identify domain matching deny-regex pattern -ad- as denyHost candidate', async () => {
+        it('should identify domain matching deny-regex pattern -ad- as denyHost candidate', async () => {
           // test-ad-domain.com contains "-ad-" which matches the pattern in deny-regex file
           // The nameserver should invoke denyHost function for this domain
           const result = await ns.enter('test-ad-domain.com', 'A');
@@ -176,7 +176,7 @@ describe('Nameserver enter() actual name resolution tests', () => {
           expect(cnameFromDenyHost).toBeDefined();
         });
 
-        test('should apply denyHost function to domains matching deny-regex patterns', async () => {
+        it('should apply denyHost function to domains matching deny-regex patterns', async () => {
           // banner-ads.com contains "-ads." pattern from deny-regex
           const result = await ns.enter('banner-ads.com', 'A');
 
