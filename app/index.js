@@ -4,7 +4,7 @@ import dnsPacket from 'dns-packet';
 import { createLogger } from '@jobscale/logger';
 import { resolver } from './resolver.js';
 import {
-  searches, records, denys, denyHost, forwarder, glueNS, authority,
+  searches, records, denys, denyAnswer, forwarder, glueNS, authority,
 } from './record.js';
 
 const { PORT, BIND } = process.env;
@@ -79,7 +79,7 @@ export class Nameserver {
     opts.visited.add(name);
 
     const deny = denys.find(exp => name.match(exp));
-    if (deny) return this.enter(...denyHost(name));
+    if (deny) return this.enter(...denyAnswer(name));
 
     const now = Math.floor(Date.now() / 1000);
 

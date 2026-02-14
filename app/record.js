@@ -63,7 +63,7 @@ export const denys = [
   .split('\n').filter(line => line.trim()).map(exp => new RegExp(exp)),
 ];
 
-export const denyHost = name => [
+export const denyAnswer = name => [
   'GITHUB.IO', 'A', {
     answers: [{
       name, type: 'CNAME', ttl: 2592000, data: 'GITHUB.IO',
