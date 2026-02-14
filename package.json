@@ -1,6 +1,6 @@
 {
   "name": "dns-nodejs",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "dns, nameserver",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     "lint": "eslint",
     "pretest": "date -Iseconds",
     "posttest": "npm run lint",
-    "test": "BIND=false NODE_OPTIONS=--experimental-vm-modules jest --runInBand --coverage --collectCoverage"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --coverage --collectCoverage --verbose"
   },
   "pre-commit": "test",
   "jest": {

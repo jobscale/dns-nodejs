@@ -7,7 +7,8 @@ import {
   searches, records, denys, denyAnswer, forwarder, glueNS, authority,
 } from './record.js';
 
-const { PORT, BIND } = process.env;
+const JEST_TEST = Object.keys(process.env).filter(v => v.toLowerCase().match('jest')).length;
+const { PORT } = process.env;
 const logger = createLogger('info', { noPathName: true, timestamp: true });
 
 export class Nameserver {
@@ -217,7 +218,7 @@ const dnsBind = async (port, bind = '127.0.0.1') => {
   });
 };
 
-if (BIND !== 'false') dnsBind(Number.parseInt(PORT, 10) || 53, '0.0.0.0');
+if (!JEST_TEST) dnsBind(Number.parseInt(PORT, 10) || 53, '0.0.0.0');
 
 export default {
   Nameserver,
