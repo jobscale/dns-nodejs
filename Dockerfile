@@ -8,6 +8,7 @@ RUN npm i
 COPY --chown=node:staff app app
 COPY --chown=node:staff acl acl
 COPY --chown=node:staff db db
+COPY --chown=node:staff index.js .
 COPY --chown=node:staff __test__ __test__
 RUN npm test
 
@@ -25,7 +26,9 @@ RUN npm i --omit=dev
 COPY --chown=node:staff app app
 COPY --chown=node:staff acl acl
 COPY --chown=node:staff db db
+COPY --chown=node:staff index.js .
 
 USER root
 EXPOSE 53/udp
+EXPOSE 53/tcp
 CMD ["npm", "start"]

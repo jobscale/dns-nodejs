@@ -1,6 +1,6 @@
 {
   "name": "dns-nodejs",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "dns, nameserver",
   "repository": {
     "type": "git",
@@ -14,9 +14,9 @@
   },
   "homepage": "https://github.com/jobscale/dns-nodejs#readme",
   "type": "module",
-  "main": "app/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app/index.js",
+    "start": "node index.js",
     "lint": "eslint",
     "pretest": "date -Iseconds",
     "posttest": "npm run lint",
@@ -29,13 +29,13 @@
     ]
   },
   "dependencies": {
-    "@jobscale/logger": "^0.10.1",
+    "@jobscale/logger": "^0.10.5",
     "dns-packet": "^5.6.1"
   },
   "devDependencies": {
-    "@jobscale/eslint-plugin-standard": "^0.0.11",
-    "eslint": "^9.39.1",
-    "eslint-plugin-jest": "^29.2.1",
+    "@jobscale/eslint-plugin-standard": "^0.0.12",
+    "eslint": "^10.0.0",
+    "eslint-plugin-jest": "^29.15.0",
     "jest": "^30.2.0",
     "pre-commit": "^1.2.2"
   }
