@@ -1,6 +1,6 @@
 {
   "name": "dns-nodejs",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "dns, nameserver",
   "repository": {
     "type": "git",
@@ -29,7 +29,6 @@
     ]
   },
   "dependencies": {
-    "@jobscale/logger": "^0.10.5",
     "dns-packet": "^5.6.1"
   },
   "devDependencies": {

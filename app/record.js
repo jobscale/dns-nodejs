@@ -1,11 +1,13 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { createLogger } from '@jobscale/logger';
 
-const logger = createLogger('info', { noPathName: true, timestamp: true });
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const json = JSON.parse(await fs.readFile(path.join(dirname, '../package.json')));
+const logger = new Proxy(console, {
+  get(target, property) {
+    return (...args) => target[property](`[dns ${property.toUpperCase()}]`.padEnd(8, ' '), ...args);
+  },
+});
+
+const json = JSON.parse(await fs.readFile('package.json'));
 
 export const forwarder = ['8.8.8.8', '8.8.4.4'];
 export const glueNS = ['NS1.GSLB13.SAKURA.NE.JP', 'NS2.GSLB13.SAKURA.NE.JP'];
@@ -41,11 +43,11 @@ const setupSearch = (search, record) => {
     const { Name: name, Type: type, RData: data, TTL: ttl } = item;
     if (!record[name]) record[name] = [];
     if (record[name].find(v => v.type.toUpperCase() === 'CNAME')) {
-      logger.warn({ 'Already CNAME': JSON.stringify(item) });
+      logger.warn(JSON.stringify({ 'Already CNAME': item }));
       return;
     }
     if (record[name].length && type.toUpperCase() === 'CNAME') {
-      logger.warn({ 'Already Multiple CNAME': JSON.stringify(item) });
+      logger.warn(JSON.stringify({ 'Already Multiple CNAME': item }));
       return;
     }
     record[name].push({ type, data, ttl });

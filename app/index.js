@@ -1,11 +1,28 @@
 import dnsPacket from 'dns-packet';
-import { createLogger } from '@jobscale/logger';
 import { resolver } from './resolver.js';
 import {
   searches, records, denys, denyAnswer, forwarder, glueNS, authority,
 } from './record.js';
 
-const logger = createLogger('info', { noPathName: true, timestamp: true });
+const JEST_TEST = Object.keys(process.env).filter(v => v.toLowerCase().match('jest')).length;
+
+const logger = new Proxy(console, {
+  get(target, property) {
+    return (...args) => target[property](`[dns ${property.toUpperCase()}]`.padEnd(8, ' '), ...args);
+  },
+});
+
+const cache = {
+  access: new Map(),
+  TTL: 60 * 60 * 1000,
+
+  clean() {
+    const expired = Date.now() - cache.TTL;
+    for (const [host, last] of cache.access.entries()) {
+      if (last < expired) cache.access.delete(host);
+    }
+  },
+};
 
 export class Nameserver {
   constructor() {
@@ -27,7 +44,7 @@ export class Nameserver {
     await Promise.all(
       glueNS.map(name => resolver(name, 'A', forwarder)),
     )
-    .then(res => res.map(({ answers: [item] }) => item.data))
+    .then(res => res.map(({ answers: [item] }) => item?.data))
     .then(glue => {
       this.transport = transport;
       this.forwarder = forwarder;
@@ -68,9 +85,14 @@ export class Nameserver {
   }
 
   async enter(name, type, opts = { answers: [] }) {
+    // IPpv6 NXDOMAIN
+    if (type === 'AAAA') return opts;
+    // IPv6 PTR (ip6.arpa) REFUSED
+    if (type === 'PTR' && name.endsWith('.ip6.arpa')) return opts;
+
     if (!opts.visited) opts.visited = new Set();
     if (opts.visited.has(name)) {
-      logger.warn(`CNAME loop detected for ${name}`);
+      logger.warn(JSON.stringify({ 'CNAME loop detected': name }));
       return opts.answers;
     }
     opts.visited.add(name);
@@ -79,6 +101,14 @@ export class Nameserver {
     if (deny) return this.enter(...denyAnswer(name));
 
     const now = Math.floor(Date.now() / 1000);
+
+    const findFirst = answers => {
+      const aData = answers?.find(answer => ['A', 'AAAA'].includes(answer.type))?.data;
+      if (aData) return aData;
+      const cname = answers?.find(answer => ['CNAME'].includes(answer.type))?.data;
+      if (cname) return cname;
+      return answers?.[0]?.data ?? 'no resolved';
+    };
 
     const resolverViaCache = async dns => {
       const key = `${name}-${type}`;
@@ -94,7 +124,13 @@ export class Nameserver {
           ? Math.max(...this.cache[key].answers.map(item => item.ttl ?? 0), 1200)
           : 120;
         this.cache[key].expires = now + expiresIn;
-        logger.info(`Query resolver for ${name} (${type}) ${JSON.stringify(this.cache[key])}`);
+        const host = `${name} (${type}) ${findFirst(this.cache[key].answers)}`;
+        if (!cache.access.get(host)) logger.info(JSON.stringify({ ts: new Date(), Query: host }));
+        cache.access.set(host, Date.now());
+        if (!JEST_TEST) {
+          clearTimeout(cache.id);
+          cache.id = setTimeout(cache.clean, 60_000);
+        }
       }
       const { answers, authorities } = this.cache[key];
       opts.answers.push(...answers);
@@ -112,7 +148,9 @@ export class Nameserver {
       exist.list.forEach(item => {
         opts.answers.push({ name, ...item });
       });
-      logger.info(`Static for ${name} (${type}) ${JSON.stringify(opts.answers)}`);
+      const host = `${name} (${type}) ${findFirst(opts.answers)}`;
+      if (!cache.access.get(host)) logger.info(JSON.stringify({ ts: new Date(), Static: host }));
+      cache.access.set(host, Date.now());
       if (!opts.authorities) opts.authorities = [authority];
     } else if (searches.find(search => name.endsWith(`.${search}`))) {
       // in search to glue
@@ -157,7 +195,8 @@ export class Nameserver {
     const [question] = questions;
     const name = question.name.toLowerCase();
     const { type } = question;
-    const { answers, authorities } = await this.enter(name, type).catch(e => logger.error(e) || []);
+    const { answers, authorities } = await this.enter(name, type)
+    .catch(e => logger.error(JSON.stringify({ enter: e.message, name, type })) ?? { answers: [] });
     const flags = answers.length ? dnsPacket.RECURSION_AVAILABLE : 0;
     const rcode = answers.length ? 0 : 3;
     const response = dnsPacket.encode({
