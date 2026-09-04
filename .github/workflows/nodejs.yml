@@ -3,7 +3,7 @@
 
 name: Nodejs CI
 
-# The workflow was triggered 484 times via automatically.
+# The workflow was triggered 485 times via automatically.
 
 on:
   # schedule:
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [ 20.x, 22.x, 24.x ]
+        node-version: [ 22.x, 24.x ]
 
     steps:
     - uses: actions/checkout@v2
